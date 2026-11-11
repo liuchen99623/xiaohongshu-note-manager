@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: python -m pip install -e .
+      - name: Compile
+        run: python -m compileall -q src
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Secret scan
+        if: matrix.python-version == '3.13'
+        run: python scripts/secret_scan.py .
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.13"
+      - name: Build wheel and source archive
+        run: |
+          python -m pip install build
+          python -m build
+      - name: Install wheel in a clean environment
+        run: |
+          python -m venv /tmp/xnm-package-test
+          /tmp/xnm-package-test/bin/pip install dist/*.whl
+          /tmp/xnm-package-test/bin/xhs-note-manager --help
+          /tmp/xnm-package-test/bin/python -m xhs_note_manager --help
+      - name: Inspect release contents
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from tarfile import open as tar_open
+          from zipfile import ZipFile
+
+          wheel = next(Path("dist").glob("*.whl"))
+          with ZipFile(wheel) as archive:
+              names = archive.namelist()
+          forbidden = [name for name in names if any(part in name.lower() for part in (".env", ".db", ".sqlite", "__pycache__"))]
+          if forbidden:
+              raise SystemExit(f"Forbidden wheel files: {forbidden}")
+
+          source = next(Path("dist").glob("*.tar.gz"))
+          with tar_open(source, "r:gz") as archive:
+              source_names = archive.getnames()
+          required = ("PRIVACY.md", "SECURITY.md", "CHANGELOG.md", "prompts/agent-system.md")
+          missing = [item for item in required if not any(name.endswith(item) for name in source_names)]
+          if missing:
+              raise SystemExit(f"Missing source files: {missing}")
+          PY

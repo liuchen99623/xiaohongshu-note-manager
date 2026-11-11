@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xiaohongshu-note-manager"
+version = "0.1.0"
+description = "开源、可本地运行的小红书图文与短视频笔记工作流助手"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "liuchen99623" }]
+keywords = ["xiaohongshu", "content-workflow", "ai-agent", "cli"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+dependencies = []
+
+[project.scripts]
+xhs-note-manager = "xhs_note_manager.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/liuchen99623/xiaohongshu-note-manager"
+Issues = "https://github.com/liuchen99623/xiaohongshu-note-manager/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
